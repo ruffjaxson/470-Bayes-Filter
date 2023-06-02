@@ -380,19 +380,19 @@ public class theRobot extends JFrame {
             }
         }
         else {  // otherwise, set up a uniform prior over all the positions in the world that are open spaces
-            int count = 0;
+            int numberOfAvailableSpaces = 0;
             
             for (int y = 0; y < mundo.height; y++) {
                 for (int x = 0; x < mundo.width; x++) {
                     if (mundo.grid[x][y] == 0)
-                        count++;
+                        numberOfAvailableSpaces++;
                 }
             }
             
             for (int y = 0; y < mundo.height; y++) {
                 for (int x = 0; x < mundo.width; x++) {
                     if (mundo.grid[x][y] == 0)
-                        probs[x][y] = 1.0 / count;
+                        probs[x][y] = 1.0 / numberOfAvailableSpaces;
                     else
                         probs[x][y] = 0;
                 }
@@ -401,6 +401,17 @@ public class theRobot extends JFrame {
         
         myMaps.updateProbs(probs);
     }
+
+    void printWorldGrid() {
+        System.out.println();
+        for (int y = 0; y < mundo.height; y++) {
+            for (int x = 0; x < mundo.width; x++) {
+                System.out.print(mundo.grid[x][y]);
+            }
+            System.out.println();
+        }
+        System.out.println();
+    }
     
     // TODO: update the probabilities of where the AI thinks it is based on the action selected and the new sonar readings
     //       To do this, you should update the 2D-array "probs"
@@ -408,6 +419,53 @@ public class theRobot extends JFrame {
     //       For example, the sonar string 1001, specifies that the sonars found a wall in the North and West directions, but not in the South and East directions
     void updateProbabilities(int action, String sonars) {
         // your code
+        boolean isWallDetectedUp = sonars.charAt(0) == 1;
+        boolean isWallDetectedDown = sonars.charAt(1) == 1;
+        boolean isWallDetectedRight = sonars.charAt(2) == 1;
+        boolean isWallDetectedLeft = sonars.charAt(3) == 1;
+        printWorldGrid();
+
+        for (int y = 0; y < mundo.height; y++) {
+            for (int x = 0; x < mundo.width; x++) {
+                if (mundo.grid[x][y] == 0){
+                    
+                    switch (action) {
+                        case 0: // up
+                            if (mundo.grid[x][y+1] == 0) { // look down
+                                probs[x][y] = 0.5;
+                            } else {
+                                probs[x][y] = 0;
+                            }
+                            break;
+                        case 1: // down
+                            if (mundo.grid[x][y-1] == 0) { // look up
+                                probs[x][y] = 0.5;
+                            } else {
+                                probs[x][y] = 0;
+                            }
+                            break;
+                        case 2: // right
+                            if (mundo.grid[x-1][y] == 0) { // look left
+                                probs[x][y] = 0.5;
+                            } else {
+                                probs[x][y] = 0;
+                            }
+                            break;
+                        case 3: // left
+                            if (mundo.grid[x+1][y] == 0) { // look right
+                                probs[x][y] = 0.5;
+                            } else {
+                                probs[x][y] = 0;
+                            }
+                            break;
+                    }
+                } else {
+                    probs[x][y] = 0;
+                }
+            }
+            System.out.println();
+        }
+
 
         myMaps.updateProbs(probs); // call this function after updating your probabilities so that the
                                    //  new probabilities will show up in the probability map on the GUI
