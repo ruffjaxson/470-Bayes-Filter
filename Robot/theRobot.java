@@ -428,36 +428,54 @@ public class theRobot extends JFrame {
         for (int y = 0; y < mundo.height; y++) {
             for (int x = 0; x < mundo.width; x++) {
                 if (mundo.grid[x][y] == 0){
-                    
-                    switch (action) {
-                        case 0: // up
-                            if (mundo.grid[x][y+1] == 0) { // look down
-                                probs[x][y] = 0.5;
-                            } else {
-                                probs[x][y] = 0;
-                            }
-                            break;
-                        case 1: // down
-                            if (mundo.grid[x][y-1] == 0) { // look up
-                                probs[x][y] = 0.5;
-                            } else {
-                                probs[x][y] = 0;
-                            }
-                            break;
-                        case 2: // right
-                            if (mundo.grid[x-1][y] == 0) { // look left
-                                probs[x][y] = 0.5;
-                            } else {
-                                probs[x][y] = 0;
-                            }
-                            break;
-                        case 3: // left
-                            if (mundo.grid[x+1][y] == 0) { // look right
-                                probs[x][y] = 0.5;
-                            } else {
-                                probs[x][y] = 0;
-                            }
-                            break;
+                    //if sensor up is valid and grid up is valid
+                    boolean isValid = true;
+                    if (!isWallDetectedUp && mundo.grid[x][y-1] == 1) {
+                        isValid = false;
+                    }
+                    else if (!isWallDetectedDown && mundo.grid[x][y+1] == 1) {
+                        isValid = false;
+                    }
+                    else if (!isWallDetectedRight && mundo.grid[x+1][y] == 1) {
+                        isValid = false;
+                    }
+                    else if (!isWallDetectedLeft && mundo.grid[x-1][y] == 1) {
+                        isValid = false;
+                    }
+                    if (isValid) {
+                        switch (action) {
+                            case 0: // up
+                                if (mundo.grid[x][y+1] == 0) { // look down
+                                    probs[x][y] = 0.5;
+                                } else {
+                                    probs[x][y] = 0;
+                                }
+                                break;
+                            case 1: // down
+                                if (mundo.grid[x][y-1] == 0) { // look up
+                                    probs[x][y] = 0.5;
+                                } else {
+                                    probs[x][y] = 0;
+                                }
+                                break;
+                            case 2: // right
+                                if (mundo.grid[x-1][y] == 0) { // look left
+                                    probs[x][y] = 0.5;
+                                } else {
+                                    probs[x][y] = 0;
+                                }
+                                break;
+                            case 3: // left
+                                if (mundo.grid[x+1][y] == 0) { // look right
+                                    probs[x][y] = 0.5;
+                                } else {
+                                    probs[x][y] = 0;
+                                }
+                                break;
+                        }
+                    }
+                    else {
+                        probs[x][y] = 0;
                     }
                 } else {
                     probs[x][y] = 0;
