@@ -419,27 +419,33 @@ public class theRobot extends JFrame {
     //       For example, the sonar string 1001, specifies that the sonars found a wall in the North and West directions, but not in the South and East directions
     void updateProbabilities(int action, String sonars) {
         // your code
-        boolean isWallDetectedUp = sonars.charAt(0) == 1;
-        boolean isWallDetectedDown = sonars.charAt(1) == 1;
-        boolean isWallDetectedRight = sonars.charAt(2) == 1;
-        boolean isWallDetectedLeft = sonars.charAt(3) == 1;
-        printWorldGrid();
+        int isWallDetectedUp = sonars.charAt(0) == '1' ? 1 : 0;
+        int isWallDetectedDown = sonars.charAt(1) == '1' ? 1 : 0;
+        int isWallDetectedRight = sonars.charAt(2) == '1' ? 1 : 0;
+        int isWallDetectedLeft = sonars.charAt(3) == '1' ? 1 : 0;
+
+        // System.out.println(getClass(sonars.charAt(1)));
+        // printWorldGrid();
+        System.out.println("isWallDetectedUp: " + isWallDetectedUp);
+        System.out.println("isWallDetectedDown: " + isWallDetectedDown);
+        System.out.println("isWallDetectedRight: " + isWallDetectedRight);
+        System.out.println("isWallDetectedLeft: " + isWallDetectedLeft);
 
         for (int y = 0; y < mundo.height; y++) {
             for (int x = 0; x < mundo.width; x++) {
                 if (mundo.grid[x][y] == 0){
                     //if sensor up is valid and grid up is valid
                     boolean isValid = true;
-                    if (!isWallDetectedUp && mundo.grid[x][y-1] == 1) {
+                    if (isWallDetectedUp != mundo.grid[x][y-1]) {
                         isValid = false;
                     }
-                    else if (!isWallDetectedDown && mundo.grid[x][y+1] == 1) {
+                    else if (isWallDetectedDown != mundo.grid[x][y+1]) {
                         isValid = false;
                     }
-                    else if (!isWallDetectedRight && mundo.grid[x+1][y] == 1) {
+                    else if (isWallDetectedRight != mundo.grid[x+1][y]) {
                         isValid = false;
                     }
-                    else if (!isWallDetectedLeft && mundo.grid[x-1][y] == 1) {
+                    else if (isWallDetectedLeft != mundo.grid[x-1][y]) {
                         isValid = false;
                     }
                     if (isValid) {
