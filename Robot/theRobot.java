@@ -412,12 +412,98 @@ public class theRobot extends JFrame {
         }
         System.out.println();
     }
+
+    double getSensorModelProbability(int up, int down, int right, int left, int x, int y) {
+
+        double probability = 1.0;
+        if (up == mundo.grid[x][y-1]) {
+            probability *= sensorAccuracy;
+        } else {
+            probability *= (1 - sensorAccuracy);
+        }
+        if (down == mundo.grid[x][y+1]) {
+            probability *= sensorAccuracy;
+        } else {
+            probability *= (1 - sensorAccuracy);
+        }
+        if (right == mundo.grid[x+1][y]) {
+            probability *= sensorAccuracy;
+        } else {
+            probability *= (1 - sensorAccuracy);
+        }
+        if (left == mundo.grid[x-1][y]) {
+            probability *= sensorAccuracy;
+        } else {
+            probability *= (1 - sensorAccuracy);
+        }
+        return probability;
+    }
+
+    int getNumberOfActionsThatKeepUsInTheSameState(int x, int y, int action) {
+        // TODO: double check this math
+        int count = 1;
+        if (action != 0 && mundo.grid[x+1][y] == 1) { // look down
+            count++;
+        } 
+        if (action != 1 && mundo.grid[x-1][y] == 1) {
+            count++;
+        } 
+        if (action != 2 && mundo.grid[x][y+1] == 1) {
+            count++;
+        } 
+        if (action != 3 && mundo.grid[x+1][y-1] == 1) {
+            count++;
+        } 
+        return count;
+    }
+
+    double getTransitionModelProbability(int up, int down, int right, int left, int x, int y, int action) {
+
+        int numberOfMovesThatKeepUsInThisState = getNumberOfActionsThatKeepUsInTheSameState(x, y, action);
+
+        double probability = 1.0;
+        switch (action) {
+            case 0: // up
+                boolean isDownAValidMove = mundo.grid[x][y+1] == 0; // look down
+                if (isDownAValidMove) { 
+                    probability = moveProb * previousProbs[x][y+1];
+                } else { // down is a wall, otherwise game would be over
+                    probability = (1 - moveProb) * (numberOfMovesThatKeepUsInThisState / 4); // move was unsuccessful
+                }
+                break;
+            case 1: // down
+                boolean isUpAValidMove = mundo.grid[x][y-1] == 0; // look down
+                if (isUpAValidMove) { // look up
+                    probability = moveProb * previousProbs[x][y-1];;
+                } else {
+                    probability = (1 - moveProb) * (numberOfMovesThatKeepUsInThisState / 4); // move was unsuccessful
+                }
+                break;
+            case 2: // right
+                if (mundo.grid[x-1][y] == 0) { // look left
+                    probs[x][y] = 0.5;
+                } else {
+                    probs[x][y] = 0;
+                }
+                break;
+            case 3: // left
+                if (mundo.grid[x+1][y] == 0) { // look right
+                    probs[x][y] = 0.5;
+                } else {
+                    probs[x][y] = 0;
+                }
+                break;
+        }
+        return probability;
+    }
     
     // TODO: update the probabilities of where the AI thinks it is based on the action selected and the new sonar readings
     //       To do this, you should update the 2D-array "probs"
     // Note: sonars is a bit string with four characters, specifying the sonar reading in the direction of North, South, East, and West
     //       For example, the sonar string 1001, specifies that the sonars found a wall in the North and West directions, but not in the South and East directions
     void updateProbabilities(int action, String sonars) {
+        // TODO: populate previousProbs
+
         // your code
         int isWallDetectedUp = sonars.charAt(0) == '1' ? 1 : 0;
         int isWallDetectedDown = sonars.charAt(1) == '1' ? 1 : 0;
@@ -434,6 +520,9 @@ public class theRobot extends JFrame {
         for (int y = 0; y < mundo.height; y++) {
             for (int x = 0; x < mundo.width; x++) {
                 if (mundo.grid[x][y] == 0){
+                    double sensorProbability = getSensorModelProbability(isWallDetectedUp, isWallDetectedDown, isWallDetectedRight, isWallDetectedLeft, x, y);
+                    double transitionProbability = getTransitionModelProbability(isWallDetectedUp, isWallDetectedDown, isWallDetectedRight, isWallDetectedLeft, x, y, action);
+
                     //if sensor up is valid and grid up is valid
                     boolean isValid = true;
                     if (isWallDetectedUp != mundo.grid[x][y-1]) {
@@ -490,7 +579,7 @@ public class theRobot extends JFrame {
             System.out.println();
         }
 
-
+        //TODO: NORMALIZE PROBABILITIES
         myMaps.updateProbs(probs); // call this function after updating your probabilities so that the
                                    //  new probabilities will show up in the probability map on the GUI
     }
