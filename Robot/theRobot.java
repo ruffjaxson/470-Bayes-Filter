@@ -33,11 +33,13 @@ class mySmartMap extends JComponent implements KeyListener {
     int gameStatus;
 
     double[][] probs;
+    double[][] previousProbs;
     double[][] vals;
     
     public mySmartMap(int w, int h, World wld) {
         mundo = wld;
         probs = new double[mundo.width][mundo.height];
+        previousProbs = new double[mundo.width][mundo.height];
         vals = new double[mundo.width][mundo.height];
         winWidth = w;
         winHeight = h;
@@ -269,9 +271,18 @@ public class theRobot extends JFrame {
     
     // store your probability map (for position of the robot in this array
     double[][] probs;
+    double[][] previousProbs;
     
     // store your computed value of being in each state (x, y)
     double[][] Vs;
+
+    public void copyProbs() {
+        for (int y = 0; y < mundo.height; y++) {
+            for (int x = 0; x < mundo.width; x++) {
+                previousProbs[x][y] = probs[x][y];
+            }
+        }
+    }
     
     public theRobot(String _manual, int _decisionDelay) {
         // initialize variables as specified from the command-line
@@ -368,6 +379,7 @@ public class theRobot extends JFrame {
     // initializes the probabilities of where the AI is
     void initializeProbabilities() {
         probs = new double[mundo.width][mundo.height];
+        previousProbs = new double[mundo.width][mundo.height];
         // if the robot's initial position is known, reflect that in the probability map
         if (knownPosition) {
             for (int y = 0; y < mundo.height; y++) {
@@ -459,42 +471,63 @@ public class theRobot extends JFrame {
 
     double getTransitionModelProbability(int up, int down, int right, int left, int x, int y, int action) {
 
-        int numberOfMovesThatKeepUsInThisState = getNumberOfActionsThatKeepUsInTheSameState(x, y, action);
+        double probabilityOfPreviousMove = 0.0;
+        boolean wasPreviousSquareAValidMove = false;
 
-        double probability = 1.0;
         switch (action) {
             case 0: // up
-                boolean isDownAValidMove = mundo.grid[x][y+1] == 0; // look down
-                if (isDownAValidMove) { 
-                    probability = moveProb * previousProbs[x][y+1];
-                } else { // down is a wall, otherwise game would be over
-                    probability = (1 - moveProb) * (numberOfMovesThatKeepUsInThisState / 4); // move was unsuccessful
+                probabilityOfPreviousMove = mundo.grid[x][y+1];
+                if (probabilityOfPreviousMove > 0.0) { 
+                    wasPreviousSquareAValidMove = true;
                 }
                 break;
             case 1: // down
-                boolean isUpAValidMove = mundo.grid[x][y-1] == 0; // look down
-                if (isUpAValidMove) { // look up
-                    probability = moveProb * previousProbs[x][y-1];;
-                } else {
-                    probability = (1 - moveProb) * (numberOfMovesThatKeepUsInThisState / 4); // move was unsuccessful
+                probabilityOfPreviousMove = mundo.grid[x][y-1];
+                if (probabilityOfPreviousMove > 0.0) { 
+                    wasPreviousSquareAValidMove = true;
                 }
                 break;
             case 2: // right
-                if (mundo.grid[x-1][y] == 0) { // look left
-                    probs[x][y] = 0.5;
-                } else {
-                    probs[x][y] = 0;
+                probabilityOfPreviousMove = mundo.grid[x-1][y];
+                if (probabilityOfPreviousMove > 0.0) { 
+                    wasPreviousSquareAValidMove = true;
                 }
                 break;
             case 3: // left
-                if (mundo.grid[x+1][y] == 0) { // look right
-                    probs[x][y] = 0.5;
-                } else {
-                    probs[x][y] = 0;
+                probabilityOfPreviousMove = mundo.grid[x+1][y];
+                if (probabilityOfPreviousMove > 0.0) { 
+                    wasPreviousSquareAValidMove = true;
                 }
                 break;
         }
-        return probability;
+
+
+        if (wasPreviousSquareAValidMove) { 
+            return moveProb * probabilityOfPreviousMove;
+        } else {
+            int numberOfMovesThatKeepUsInThisState = getNumberOfActionsThatKeepUsInTheSameState(x, y, action);
+            return (1 - moveProb) * (numberOfMovesThatKeepUsInThisState / 4); // move was unsuccessful
+        }
+    }
+
+    void normalizeProbs() {
+        double sum = 0.0;
+        for (int y = 0; y < mundo.height; y++) {
+            for (int x = 0; x < mundo.width; x++) {
+                if (mundo.grid[x][y] == 0){
+                    sum += probs[x][y];
+                }
+            }
+        }
+
+        for (int y = 0; y < mundo.height; y++) {
+            for (int x = 0; x < mundo.width; x++) {
+                if (mundo.grid[x][y] == 0){
+                    probs[x][y] = probs[x][y] / sum;
+                }
+            }
+        }
+
     }
     
     // TODO: update the probabilities of where the AI thinks it is based on the action selected and the new sonar readings
@@ -502,76 +535,29 @@ public class theRobot extends JFrame {
     // Note: sonars is a bit string with four characters, specifying the sonar reading in the direction of North, South, East, and West
     //       For example, the sonar string 1001, specifies that the sonars found a wall in the North and West directions, but not in the South and East directions
     void updateProbabilities(int action, String sonars) {
-        // TODO: populate previousProbs
-
+        copyProbs();
         // your code
         int isWallDetectedUp = sonars.charAt(0) == '1' ? 1 : 0;
         int isWallDetectedDown = sonars.charAt(1) == '1' ? 1 : 0;
         int isWallDetectedRight = sonars.charAt(2) == '1' ? 1 : 0;
         int isWallDetectedLeft = sonars.charAt(3) == '1' ? 1 : 0;
+        double sensorProbability;
+        double transitionProbability;
 
         // System.out.println(getClass(sonars.charAt(1)));
         // printWorldGrid();
-        System.out.println("isWallDetectedUp: " + isWallDetectedUp);
-        System.out.println("isWallDetectedDown: " + isWallDetectedDown);
-        System.out.println("isWallDetectedRight: " + isWallDetectedRight);
-        System.out.println("isWallDetectedLeft: " + isWallDetectedLeft);
+        // System.out.println("isWallDetectedUp: " + isWallDetectedUp);
+        // System.out.println("isWallDetectedDown: " + isWallDetectedDown);
+        // System.out.println("isWallDetectedRight: " + isWallDetectedRight);
+        // System.out.println("isWallDetectedLeft: " + isWallDetectedLeft);
 
         for (int y = 0; y < mundo.height; y++) {
             for (int x = 0; x < mundo.width; x++) {
                 if (mundo.grid[x][y] == 0){
-                    double sensorProbability = getSensorModelProbability(isWallDetectedUp, isWallDetectedDown, isWallDetectedRight, isWallDetectedLeft, x, y);
-                    double transitionProbability = getTransitionModelProbability(isWallDetectedUp, isWallDetectedDown, isWallDetectedRight, isWallDetectedLeft, x, y, action);
+                    sensorProbability = getSensorModelProbability(isWallDetectedUp, isWallDetectedDown, isWallDetectedRight, isWallDetectedLeft, x, y);
+                    transitionProbability = getTransitionModelProbability(isWallDetectedUp, isWallDetectedDown, isWallDetectedRight, isWallDetectedLeft, x, y, action);
 
-                    //if sensor up is valid and grid up is valid
-                    boolean isValid = true;
-                    if (isWallDetectedUp != mundo.grid[x][y-1]) {
-                        isValid = false;
-                    }
-                    else if (isWallDetectedDown != mundo.grid[x][y+1]) {
-                        isValid = false;
-                    }
-                    else if (isWallDetectedRight != mundo.grid[x+1][y]) {
-                        isValid = false;
-                    }
-                    else if (isWallDetectedLeft != mundo.grid[x-1][y]) {
-                        isValid = false;
-                    }
-                    if (isValid) {
-                        switch (action) {
-                            case 0: // up
-                                if (mundo.grid[x][y+1] == 0) { // look down
-                                    probs[x][y] = 0.5;
-                                } else {
-                                    probs[x][y] = 0;
-                                }
-                                break;
-                            case 1: // down
-                                if (mundo.grid[x][y-1] == 0) { // look up
-                                    probs[x][y] = 0.5;
-                                } else {
-                                    probs[x][y] = 0;
-                                }
-                                break;
-                            case 2: // right
-                                if (mundo.grid[x-1][y] == 0) { // look left
-                                    probs[x][y] = 0.5;
-                                } else {
-                                    probs[x][y] = 0;
-                                }
-                                break;
-                            case 3: // left
-                                if (mundo.grid[x+1][y] == 0) { // look right
-                                    probs[x][y] = 0.5;
-                                } else {
-                                    probs[x][y] = 0;
-                                }
-                                break;
-                        }
-                    }
-                    else {
-                        probs[x][y] = 0;
-                    }
+                    probs[x][y] = sensorProbability * transitionProbability;
                 } else {
                     probs[x][y] = 0;
                 }
@@ -579,7 +565,7 @@ public class theRobot extends JFrame {
             System.out.println();
         }
 
-        //TODO: NORMALIZE PROBABILITIES
+        normalizeProbs();
         myMaps.updateProbs(probs); // call this function after updating your probabilities so that the
                                    //  new probabilities will show up in the probability map on the GUI
     }
