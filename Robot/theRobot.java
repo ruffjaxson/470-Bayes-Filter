@@ -250,6 +250,7 @@ public class theRobot extends JFrame {
     public static final int STAY = 4;
 
     Color bkgroundColor = new Color(230,230,230);
+    double[] validDirections = new double[4];
     
     static mySmartMap myMaps; // instance of the class that draw everything to the GUI
     String mundoName;
@@ -272,6 +273,7 @@ public class theRobot extends JFrame {
     // store your probability map (for position of the robot in this array
     double[][] probs;
     double[][] previousProbs;
+    double[][] spilledProbs;
     
     // store your computed value of being in each state (x, y)
     double[][] Vs;
@@ -380,6 +382,7 @@ public class theRobot extends JFrame {
     void initializeProbabilities() {
         probs = new double[mundo.width][mundo.height];
         previousProbs = new double[mundo.width][mundo.height];
+        spilledProbs = new double[mundo.width][mundo.height];
         // if the robot's initial position is known, reflect that in the probability map
         if (knownPosition) {
             for (int y = 0; y < mundo.height; y++) {
@@ -467,52 +470,87 @@ public class theRobot extends JFrame {
     int getNumberOfActionsThatKeepUsInTheSameState(int x, int y, int action) {
         // TODO: double check this math
         int count = 1;
-        if (action != 0 && mundo.grid[x+1][y] == 1) { // look down
+        if (action != 0 && mundo.grid[x][y-1] == 1) {
             count++;
         } 
-        if (action != 1 && mundo.grid[x-1][y] == 1) {
+        if (action != 1 && mundo.grid[x][y+1] == 1) {
             count++;
         } 
-        if (action != 2 && mundo.grid[x][y+1] == 1) {
+        if (action != 2 && mundo.grid[x+1][y] == 1) {
             count++;
         } 
-        if (action != 3 && mundo.grid[x+1][y-1] == 1) {
+        if (action != 3 && mundo.grid[x-1][y] == 1) {
             count++;
         } 
         return count;
     }
 
-    double getTransitionModelProbability(int up, int down, int right, int left, int x, int y, int action) {
+    int getValidDirections(int x, int y) {
+        int count = 1;
+        if (mundo.grid[x][y-1] == 0) { // up
+            validDirections[0] = previousProbs[x][y-1];
+            count++;
+        } else {
+            validDirections[0] = 0;
+        }
+        if (mundo.grid[x][y+1] == 0) { // down
+            validDirections[1] = previousProbs[x][y+1];
+            count++;
+        } else {
+            validDirections[1] = 0;
+        }
+        if (mundo.grid[x-1][y] == 0) { // right
+            validDirections[2] = previousProbs[x-1][y];
+            count++;
+        } else {
+            validDirections[2] = 0;
+        }
+        if (mundo.grid[x+1][y] == 0) { // left
+            validDirections[3] = previousProbs[x+1][y];
+            count++;
+        } else {
+            validDirections[3] = 0;
+        }
+        return count;
+    }
 
-        double probabilityOfPreviousMove = 0.0;
+    double getTransitionModelProbability(int up, int down, int right, int left, int x, int y, int actionTaken) {
+        int numberOfValidDirections = getValidDirections(x, y);
+
+        double probabilityOfSupposedPreviousMove = 0.0;
         double probability = 0.0;
-        switch (action) {
+        switch (actionTaken) {
             case 0: // up
-                probabilityOfPreviousMove = mundo.grid[x][y+1];
+                probabilityOfSupposedPreviousMove = previousProbs[x][y+1]; // look down
                 break;
             case 1: // down
-                probabilityOfPreviousMove = mundo.grid[x][y-1];
+                probabilityOfSupposedPreviousMove = previousProbs[x][y-1]; // look up
                 break;
             case 2: // right
-                probabilityOfPreviousMove = mundo.grid[x-1][y];
+                probabilityOfSupposedPreviousMove = previousProbs[x-1][y]; // look left
                 break;
             case 3: // left
-                probabilityOfPreviousMove = mundo.grid[x+1][y];
+                probabilityOfSupposedPreviousMove = previousProbs[x+1][y]; // look right
                 break;
         }
+        probability += moveProb * probabilityOfSupposedPreviousMove; 
+        double multiplier = (1 - moveProb) / numberOfValidDirections;
 
 
-        if (probabilityOfPreviousMove > 0.0) { // supposed previous square was valid 
-            probability = moveProb * probabilityOfPreviousMove;
-        } else {
-            int numberOfMovesThatKeepUsInThisState = getNumberOfActionsThatKeepUsInTheSameState(x, y, action);
-            probability = (1 - moveProb) * (numberOfMovesThatKeepUsInThisState / 4); // move was unsuccessful
+
+        for (int i = 0; i < 4 && i != actionTaken; i++) {
+            if (validDirections[i] > 0.0) {
+                probability += multiplier * validDirections[i];
+            }
         }
+        probability += multiplier * previousProbs[x][y];
 
-
-        // TODO: include surrounding states
-        // what is the probability that we were previously one square away, and the move failed, and spilled into our current x, y position
-
+        // if (probabilityOfSupposedPreviousMove > 0.0) { // supposed previous square was valid 
+        //     probability = moveProb * probabilityOfSupposedPreviousMove;
+        // } else {
+        //     int numberOfMovesThatKeepUsInThisState = getNumberOfActionsThatKeepUsInTheSameState(x, y, actionTaken);
+        //     probability = (1 - moveProb) * (numberOfMovesThatKeepUsInThisState / 4); // move was unsuccessful
+        // }
         return probability;
     }
 
@@ -577,6 +615,7 @@ public class theRobot extends JFrame {
         normalizeProbs();
         printProbs();
         System.out.println("probs after normalizing:");
+        printProbs();
         myMaps.updateProbs(probs); // call this function after updating your probabilities so that the
                                    //  new probabilities will show up in the probability map on the GUI
     }
