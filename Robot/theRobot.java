@@ -425,6 +425,17 @@ public class theRobot extends JFrame {
         System.out.println();
     }
 
+    void printProbs() {
+        System.out.println();
+        for (int y = 0; y < mundo.height; y++) {
+            for (int x = 0; x < mundo.width; x++) {
+                System.out.print(probs[x][y] + " ");
+            }
+            System.out.println();
+        }
+        System.out.println();
+    }
+
     double getSensorModelProbability(int up, int down, int right, int left, int x, int y) {
 
         double probability = 1.0;
@@ -448,6 +459,8 @@ public class theRobot extends JFrame {
         } else {
             probability *= (1 - sensorAccuracy);
         }
+
+        System.out.println("Got " + probability + " for sensor prob");
         return probability;
     }
 
@@ -472,42 +485,35 @@ public class theRobot extends JFrame {
     double getTransitionModelProbability(int up, int down, int right, int left, int x, int y, int action) {
 
         double probabilityOfPreviousMove = 0.0;
-        boolean wasPreviousSquareAValidMove = false;
-
+        double probability = 0.0;
         switch (action) {
             case 0: // up
                 probabilityOfPreviousMove = mundo.grid[x][y+1];
-                if (probabilityOfPreviousMove > 0.0) { 
-                    wasPreviousSquareAValidMove = true;
-                }
                 break;
             case 1: // down
                 probabilityOfPreviousMove = mundo.grid[x][y-1];
-                if (probabilityOfPreviousMove > 0.0) { 
-                    wasPreviousSquareAValidMove = true;
-                }
                 break;
             case 2: // right
                 probabilityOfPreviousMove = mundo.grid[x-1][y];
-                if (probabilityOfPreviousMove > 0.0) { 
-                    wasPreviousSquareAValidMove = true;
-                }
                 break;
             case 3: // left
                 probabilityOfPreviousMove = mundo.grid[x+1][y];
-                if (probabilityOfPreviousMove > 0.0) { 
-                    wasPreviousSquareAValidMove = true;
-                }
                 break;
         }
 
 
-        if (wasPreviousSquareAValidMove) { 
-            return moveProb * probabilityOfPreviousMove;
+        if (probabilityOfPreviousMove > 0.0) { // supposed previous square was valid 
+            probability = moveProb * probabilityOfPreviousMove;
         } else {
             int numberOfMovesThatKeepUsInThisState = getNumberOfActionsThatKeepUsInTheSameState(x, y, action);
-            return (1 - moveProb) * (numberOfMovesThatKeepUsInThisState / 4); // move was unsuccessful
+            probability = (1 - moveProb) * (numberOfMovesThatKeepUsInThisState / 4); // move was unsuccessful
         }
+
+
+        // TODO: include surrounding states
+        // what is the probability that we were previously one square away, and the move failed, and spilled into our current x, y position
+
+        return probability;
     }
 
     void normalizeProbs() {
@@ -565,7 +571,12 @@ public class theRobot extends JFrame {
             System.out.println();
         }
 
+
+        System.out.println("probs before normalizing:");
+        printProbs();
         normalizeProbs();
+        printProbs();
+        System.out.println("probs after normalizing:");
         myMaps.updateProbs(probs); // call this function after updating your probabilities so that the
                                    //  new probabilities will show up in the probability map on the GUI
     }
