@@ -313,6 +313,23 @@ public class theRobot extends JFrame {
         
         setVisible(true);
         setTitle("Probability and Value Maps");
+        if (!isManual) {
+            //initialize reward for goal and all other open tiles
+            //maxDiff = 0
+            //do
+                //for each row x
+                    //for each column y
+                        // if tile is open
+                            // maxAction = -1
+                            // for each action
+                                //if tile is open
+                                    // if probability * utility of move is bigger than maxAction
+                                        //maxAction = currAction
+                            // utility of this tile = reward of this tile * discount factor * maxAction
+                            // if current utility - prev utility > maxDiff
+                                // maxDiff = current utility - prev utility
+            //while maxDiff > 0.01
+        }
         
         doStuff(); // Function to have the robot move about its world until it gets to its goal or falls in a stairwell
     }
