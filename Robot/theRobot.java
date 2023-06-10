@@ -7,6 +7,8 @@ import java.awt.Graphics;
 import java.lang.*;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.text.Utilities;
+
 import java.io.*;
 import java.util.Random;
 import java.util.Scanner;
@@ -249,8 +251,14 @@ public class theRobot extends JFrame {
     public static final int WEST = 3;
     public static final int STAY = 4;
 
+    public static final int OPEN = 0;
+    public static final int WALL = 1;
+    public static final int LAVA = 2;
+    public static final int GOAL = 3;
+
     Color bkgroundColor = new Color(230,230,230);
     double[] validDirections = new double[4];
+    int[] sureValidDirections = new int[4];
     
     static mySmartMap myMaps; // instance of the class that draw everything to the GUI
     String mundoName;
@@ -268,12 +276,16 @@ public class theRobot extends JFrame {
     boolean isManual = false; // determines whether you (manual) or the AI (automatic) controls the robots movements
     boolean knownPosition = false;
     int startX = -1, startY = -1;
+    int currentX = -1, currentY = -1;
     int decisionDelay = 250;
     
     // store your probability map (for position of the robot in this array
     double[][] probs;
     double[][] previousProbs;
     double[][] spilledProbs;
+    double[][] rewards;
+    double[][] utilities;
+    double[][] prevUtilities;
     
     // store your computed value of being in each state (x, y)
     double[][] Vs;
@@ -313,23 +325,6 @@ public class theRobot extends JFrame {
         
         setVisible(true);
         setTitle("Probability and Value Maps");
-        if (!isManual) {
-            //initialize reward for goal and all other open tiles
-            //maxDiff = 0
-            //do
-                //for each row x
-                    //for each column y
-                        // if tile is open
-                            // maxAction = -1
-                            // for each action
-                                //if tile is open
-                                    // if probability * utility of move is bigger than maxAction
-                                        //maxAction = currAction
-                            // utility of this tile = reward of this tile * discount factor * maxAction
-                            // if current utility - prev utility > maxDiff
-                                // maxDiff = current utility - prev utility
-            //while maxDiff > 0.01
-        }
         
         doStuff(); // Function to have the robot move about its world until it gets to its goal or falls in a stairwell
     }
@@ -361,6 +356,8 @@ public class theRobot extends JFrame {
                 knownPosition = true;
                 startX = Integer.parseInt(sin.readLine());
                 startY = Integer.parseInt(sin.readLine());
+                currentX = startX;
+                currentY = startY;
                 System.out.println("Robot's initial position is known: " + startX + ", " + startY);
             }
             else {
@@ -400,6 +397,9 @@ public class theRobot extends JFrame {
         probs = new double[mundo.width][mundo.height];
         previousProbs = new double[mundo.width][mundo.height];
         spilledProbs = new double[mundo.width][mundo.height];
+        rewards = new double[mundo.width][mundo.height];
+        utilities = new double[mundo.width][mundo.height];
+        prevUtilities = new double[mundo.width][mundo.height];
         // if the robot's initial position is known, reflect that in the probability map
         if (knownPosition) {
             for (int y = 0; y < mundo.height; y++) {
@@ -445,11 +445,11 @@ public class theRobot extends JFrame {
         System.out.println();
     }
 
-    void printProbs() {
+    void printGeneral(double general[][]) {
         System.out.println();
         for (int y = 0; y < mundo.height; y++) {
             for (int x = 0; x < mundo.width; x++) {
-                System.out.print(probs[x][y] + " ");
+                System.out.print(general[x][y] + " ");
             }
             System.out.println();
         }
@@ -506,24 +506,28 @@ public class theRobot extends JFrame {
         int count = 1;
         if (mundo.grid[x][y-1] == 0) { // up
             validDirections[0] = previousProbs[x][y-1];
+            sureValidDirections[0] = 1;
             count++;
         } else {
             validDirections[0] = 0;
         }
         if (mundo.grid[x][y+1] == 0) { // down
             validDirections[1] = previousProbs[x][y+1];
+            sureValidDirections[1] = 1;
             count++;
         } else {
             validDirections[1] = 0;
         }
         if (mundo.grid[x-1][y] == 0) { // right
             validDirections[2] = previousProbs[x-1][y];
+            sureValidDirections[2] = 1;
             count++;
         } else {
             validDirections[2] = 0;
         }
         if (mundo.grid[x+1][y] == 0) { // left
             validDirections[3] = previousProbs[x+1][y];
+            sureValidDirections[3] = 1;
             count++;
         } else {
             validDirections[3] = 0;
@@ -627,21 +631,180 @@ public class theRobot extends JFrame {
         }
 
 
-        System.out.println("probs before normalizing:");
-        printProbs();
-        normalizeProbs();
-        printProbs();
-        System.out.println("probs after normalizing:");
-        printProbs();
+        // System.out.println("probs before normalizing:");
+        // printGeneral(probabilies);
+        // normalizeProbs();
+        // printGeneral();
+        // System.out.println("probs after normalizing:");
+        // printGeneral();
         myMaps.updateProbs(probs); // call this function after updating your probabilities so that the
                                    //  new probabilities will show up in the probability map on the GUI
     }
     
+
+    void updateCurrentLocation(int action) {
+        switch (action) {
+            case NORTH:
+                currentY -= 1;
+                break;
+            case SOUTH:
+                currentY += 1;
+                break;
+            case EAST:
+                currentX += 1;
+                break;
+            case WEST:
+                currentX -= 1;
+                break;
+        }
+    }
+
     // This is the function you'd need to write to make the robot move using your AI;
     // You do NOT need to write this function for this lab; it can remain as is
     int automaticAction() {
+        double maxAction = 0.0;
+        int maxIndex = STAY;
+        getValidDirections(currentX, currentY);
+
+        for (int i = 0; i < 4; i++) {
+            if (sureValidDirections[i] == 1) {
+                switch (i) {
+                    case NORTH:
+                        if (utilities[currentX][currentY - 1] > maxAction) {
+                            maxIndex = i;
+                            maxAction = utilities[currentX][currentY - 1];
+                        }
+                        break;
+                    case SOUTH:
+                        if (utilities[currentX][currentY + 1] > maxAction) {
+                            maxIndex = i;
+                            maxAction = utilities[currentX][currentY + 1];
+                        }
+                        break;
+                    case EAST:
+                        if (utilities[currentX + 1][currentY] > maxAction) {
+                            maxIndex = i;
+                            maxAction = utilities[currentX + 1][currentY];
+                        }
+                        break;
+                    case WEST:
+                        if (utilities[currentX - 1][currentY] > maxAction) {
+                            maxIndex = i;
+                            maxAction = utilities[currentX - 1][currentY];
+                        }
+                        break;
+                }
+            }
+        }
+
+        updateCurrentLocation(maxIndex);
+        return maxIndex;  // default action for now
+    }
+
+    void setInitialRewards() {
+        for (int y = 0; y < mundo.height; y++) {
+            for (int x = 0; x < mundo.width; x++) {
+                switch (mundo.grid[x][y]) {
+                    case OPEN:
+                        rewards[x][y] = -1;
+                        break;
+                    case LAVA:
+                        rewards[x][y] = -100;
+                        break;
+                    case GOAL:
+                        rewards[x][y] = 100;
+                        break;
+                }
+            }
+        }
+    }
+
+    void setPreviousUtilties() {
+        for (int y = 0; y < mundo.height; y++) {
+            for (int x = 0; x < mundo.width; x++) {
+                prevUtilities[x][y] = utilities[x][y];
+            }
+        }
+    }
+
+    void recalculateUtilities() {
+        double maxDiff = 0.0;
+        double maxUtility = 0.0;
+        printGeneral(rewards);
+        do {
+            printGeneral(utilities);
+            try {
+                Thread.sleep(2000);  // delay that is useful to see what is happening when the AI selects actions
+            } catch (InterruptedException e) {
+
+            }
+            for (int y = 0; y < mundo.height; y++) {
+                for (int x = 0; x < mundo.width; x++) {
+                    if (mundo.grid[x][y] != WALL) {
+                        maxUtility = 0.0;
+                        getValidDirections(x, y);
+                        for (int i = 0; i < 4; i++) {
+                            if (sureValidDirections[i] == 1) {
+                                switch (i) {
+                                    case NORTH:
+                                        if (prevUtilities[x][y-1] > maxUtility) {
+                                            maxUtility = prevUtilities[x][y-1];
+                                        }
+                                    case SOUTH:
+                                        if (prevUtilities[x][y+1] > maxUtility) {
+                                            maxUtility = prevUtilities[x][y+1];
+                                        }
+                                    // TODO: COME CHECK THESE [X+1]'S AND STUFF
+                                    case EAST:
+                                        if (prevUtilities[x+1][y] > maxUtility) {
+                                            maxUtility = prevUtilities[x+1][y];
+                                        }
+                                    case WEST:
+                                        if (prevUtilities[x-1][y] > maxUtility) {
+                                            maxUtility = prevUtilities[x-1][y];
+                                        }
+                                }
+                            }
+                        }
+                        utilities[x][y] = maxUtility;
+                        maxDiff = Math.max(maxDiff, Math.abs(utilities[x][y] - prevUtilities[x][y]));
+                    }
+                }
+            }
+            System.out.println("maxDiff: " + maxDiff);
+            setPreviousUtilties();
+        } while (maxDiff > 2.0);
+    }
+
+    void setInitialUtilities() {
+        for (int y = 0; y < mundo.height; y++) {
+            for (int x = 0; x < mundo.width; x++) {
+                prevUtilities[x][y] = rewards[x][y];
+                utilities[x][y] = rewards[x][y];
+            }
+        }
+    }
+
+    void initializeValueIteration() {
+        //initialize reward for goal and all other open tiles
+  
+        setInitialRewards();
+        setInitialUtilities();
+        recalculateUtilities();
+
         
-        return STAY;  // default action for now
+        //for each row x
+            //for each column y
+                // if tile is open
+                    // maxAction = -1
+                    // for each action
+                        //if tile is open
+                            // if probability * utility of move is bigger than maxAction
+                                //maxAction = currAction
+                    // utility of this tile = reward of this tile * discount factor * maxAction
+                    // if current utility - prev utility > maxDiff
+                        // maxDiff = current utility - prev utility
+    //while maxDiff > 0.01
     }
     
     void doStuff() {
@@ -649,6 +812,7 @@ public class theRobot extends JFrame {
         
         //valueIteration();  // TODO: function you will write in Part II of the lab
         initializeProbabilities();  // Initializes the location (probability) map
+        initializeValueIteration();
         
         while (true) {
             try {
@@ -665,6 +829,7 @@ public class theRobot extends JFrame {
                 //System.out.println("Sonars: " + sonars);
             
                 updateProbabilities(action, sonars); // TODO: this function should update the probabilities of where the AI thinks it is
+                recalculateUtilities(); 
                 
                 if (sonars.length() > 4) {  // check to see if the robot has reached its goal or fallen down stairs
                     if (sonars.charAt(4) == 'w') {
