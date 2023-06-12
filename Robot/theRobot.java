@@ -732,17 +732,18 @@ public class theRobot extends JFrame {
         double maxUtility = 0.0;
         printGeneral(rewards);
         do {
+            maxDiff = 0.0;
             printGeneral(utilities);
             try {
                 System.out.println("Sleeping...");
-                Thread.sleep(2000);  // delay that is useful to see what is happening when the AI selects actions
+                Thread.sleep(500);  // delay that is useful to see what is happening when the AI selects actions
             } catch (InterruptedException e) {
 
             }
             for (int y = 0; y < mundo.height; y++) {
                 for (int x = 0; x < mundo.width; x++) {
+                    maxUtility = Double.NEGATIVE_INFINITY;
                     if (mundo.grid[x][y] == OPEN) {
-                        maxUtility = Double.NEGATIVE_INFINITY;
                         getValidDirections(x, y);
                         for (int i = 0; i < 4; i++) {
                             if (sureValidDirections[i] == 1) {
