@@ -1,29 +1,32 @@
 {
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
-  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-  "version": "0.2.0",
-  "configurations": [
-    
-    {
-      "type": "java",
-      "name": "Current File",
-      "request": "launch",
-      "mainClass": "${file}"
-    },
-    {
-      "type": "java",
-      "name": "BayesWorld",
-      "request": "launch",
-      "mainClass": "BayesWorld",
-      "projectName": "codeDistribution_d215d636"
-    },
-    {
-      "type": "java",
-      "name": "theRobot",
-      "request": "launch",
-      "mainClass": "theRobot",
-      "projectName": "codeDistribution_d215d636"
-    }
-  ]
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "BayesWorld",
+            "request": "launch",
+            "mainClass": "BayesWorld",
+            "projectName": "470-Bayes-Filter_e066175d",
+            "cwd": "${workspaceFolder}/Server",
+            "args": ["mundo_maze.txt", "1.0", "1.0", "known"]
+        },
+        {
+            "type": "java",
+            "name": "theRobot",
+            "request": "launch",
+            "mainClass": "theRobot",
+            "projectName": "470-Bayes-Filter_e066175d",
+            "cwd": "${workspaceFolder}/Robot",
+            "args": ["automatic", "1000"]
+        }
+    ]
 }
