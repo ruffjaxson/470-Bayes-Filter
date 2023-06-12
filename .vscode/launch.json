@@ -26,7 +26,7 @@
             "mainClass": "theRobot",
             "projectName": "470-Bayes-Filter_e066175d",
             "cwd": "${workspaceFolder}/Robot",
-            "args": ["automatic", "1000"]
+            "args": ["automatic", "250"]
         }
     ]
 }

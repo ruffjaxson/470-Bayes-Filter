@@ -255,6 +255,7 @@ public class theRobot extends JFrame {
     public static final int WALL = 1;
     public static final int LAVA = 2;
     public static final int GOAL = 3;
+    double discountFactor = 1.0;
 
     Color bkgroundColor = new Color(230,230,230);
     double[] validDirections = new double[4];
@@ -768,7 +769,7 @@ public class theRobot extends JFrame {
                                 }
                             }
                         }
-                        utilities[x][y] = maxUtility + rewards[x][y];
+                        utilities[x][y] = rewards[x][y] + (discountFactor * maxUtility);
                         maxDiff = Math.max(maxDiff, Math.abs(utilities[x][y] - prevUtilities[x][y]));
                     }
                 }
@@ -789,24 +790,9 @@ public class theRobot extends JFrame {
 
     void initializeValueIteration() {
         //initialize reward for goal and all other open tiles
-  
         setInitialRewards();
         setInitialUtilities();
         recalculateUtilities();
-
-        
-        //for each row x
-            //for each column y
-                // if tile is open
-                    // maxAction = -1
-                    // for each action
-                        //if tile is open
-                            // if probability * utility of move is bigger than maxAction
-                                //maxAction = currAction
-                    // utility of this tile = reward of this tile * discount factor * maxAction
-                    // if current utility - prev utility > maxDiff
-                        // maxDiff = current utility - prev utility
-    //while maxDiff > 0.01
     }
     
     void doStuff() {
