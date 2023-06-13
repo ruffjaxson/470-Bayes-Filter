@@ -10,6 +10,12 @@ import javax.swing.JFrame;
 import javax.swing.text.Utilities;
 
 import java.io.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.net.*;
@@ -526,33 +532,37 @@ public class theRobot extends JFrame {
 
     int getValidDirections(int x, int y) {
         int count = 1;
-        if (mundo.grid[x][y-1] == 0) { // up
+        if (mundo.grid[x][y-1] != WALL) { // up
             validDirections[0] = previousProbs[x][y-1];
             sureValidDirections[0] = 1;
             count++;
         } else {
             validDirections[0] = 0;
+            sureValidDirections[0] = 0;
         }
-        if (mundo.grid[x][y+1] == 0) { // down
+        if (mundo.grid[x][y+1] != WALL) { // down
             validDirections[1] = previousProbs[x][y+1];
             sureValidDirections[1] = 1;
             count++;
         } else {
             validDirections[1] = 0;
+            sureValidDirections[1] = 0;
         }
-        if (mundo.grid[x+1][y] == 0) { // right
+        if (mundo.grid[x+1][y] != WALL) { // right
             validDirections[2] = previousProbs[x+1][y];
             sureValidDirections[2] = 1;
             count++;
         } else {
             validDirections[2] = 0;
+            sureValidDirections[2] = 0;
         }
-        if (mundo.grid[x-1][y] == 0) { // left
+        if (mundo.grid[x-1][y] != WALL) { // left
             validDirections[3] = previousProbs[x-1][y];
             sureValidDirections[3] = 1;
             count++;
         } else {
             validDirections[3] = 0;
+            sureValidDirections[3] = 0;
         }
         return count;
     }
@@ -763,34 +773,39 @@ public class theRobot extends JFrame {
         return maxProb;
     }
 
-    int getBestActionForUnknown() {
+    int getBestActionForUnknown(int x, int y) {
         double maxUtility = Double.NEGATIVE_INFINITY;
         int bestAction = -1;
+        getValidDirections(x, y);
         for (int i = 0; i < 4; i++) {
             if (sureValidDirections[i] == 1) {
                 switch (i) {
                     case NORTH:
-                        if (utilities[currentX][currentY - 1] > maxUtility) {
+                        System.out.println("utility moving NORTH: " + utilities[x][y - 1]);
+                        if (utilities[x][y - 1] > maxUtility) {
                             bestAction = i;
-                            maxUtility = utilities[currentX][currentY - 1];
+                            maxUtility = utilities[x][y - 1];
                         }
                         break;
                     case SOUTH:
-                        if (utilities[currentX][currentY + 1] > maxUtility) {
+                        System.out.println("utility moving SOUTH: " + utilities[x][y + 1]);
+                        if (utilities[x][y + 1] > maxUtility) {
                             bestAction = i;
-                            maxUtility = utilities[currentX][currentY + 1];
+                            maxUtility = utilities[x][y + 1];
                         }
                         break;
                     case EAST:
-                        if (utilities[currentX + 1][currentY] > maxUtility) {
+                        System.out.println("utility moving EAST: " + utilities[x + 1][y]);
+                        if (utilities[x + 1][y] > maxUtility) {
                             bestAction = i;
-                            maxUtility = utilities[currentX + 1][currentY];
+                            maxUtility = utilities[x + 1][y];
                         }
                         break;
                     case WEST:
-                        if (utilities[currentX - 1][currentY] > maxUtility) {
+                        System.out.println("utility moving WEST: " + utilities[x - 1][y]);
+                        if (utilities[x - 1][y] > maxUtility) {
                             bestAction = i;
-                            maxUtility = utilities[currentX - 1][currentY];
+                            maxUtility = utilities[x - 1][y];
                         }
                         break;
                 }
@@ -801,20 +816,85 @@ public class theRobot extends JFrame {
 
     // This is the function you'd need to write to make the robot move using your AI;
     // You do NOT need to write this function for this lab; it can remain as is
-    int automaticAction() {
+    int automaticAction(String sonars) {
         if (knownPosition) {
             return getActionForKnownPosition();
         }
 
         double probability = getMostProbablePosition();
-        if (probability < 0.5) {
-            // find safer move
+
+        if (probability < 0.5 && sonars != "Undefined") {
+            // // find safer move
+            // //since sonars are not defined on the first move, we 
+            // //check that sonars doesn't equal "Undefined" to make sure
+            // //the sonars have actually read something
+            // System.out.println("Unsure of place, moving towards wall...");
+            // int safeMoves[] = new int[4];
+            // int numSafeMoves = 0;
+            // for (int i = 0; i < 4; i++) {
+            //     if (sonars.charAt(i) == '1') {
+            //         safeMoves[numSafeMoves] = i;
+            //         numSafeMoves += 1;
+            //     }
+            // }
+            // int randAction = 0;
+            // if (numSafeMoves > 0) {
+            //     int randNum = ((int) Math.random()) % numSafeMoves;
+            //     randAction = safeMoves[randNum];
+            // }
+            // else {
+            //     randAction = ((int) Math.random()) % 4;
+            // }
+            // return randAction;
+            HashMap<Integer, Integer> matchingDict = new HashMap<Integer, Integer>();
+            int sonarArray[] = new int[4];
+            for (int i = 0; i < 4; i++){
+                //We're flipping it because we want to compare valid moves
+                sonarArray[i] = sonars.charAt(i) == '1' ? 0 : 1;
+            }
+            int keyCounter = 0;
+            int numCorrect = 0;
+            for (int y = 0; y < mundo.height; y++){
+                for (int x = 0; x < mundo.width; x++) {
+                    if (mundo.grid[x][y] == OPEN) {
+                        getValidDirections(x, y);
+                        numCorrect = 0;
+                        for (int j = 0; j < 4; j++) {
+                            if (sonarArray[j] == sureValidDirections[j]) {
+                                numCorrect += 1;
+                            }
+                        }
+                        if (numCorrect > 0) {
+                            matchingDict.put(keyCounter, numCorrect);
+                        }
+                    }
+                    keyCounter += 1;
+                }
+            }
+            // Map<Integer, Integer> mySortedMap = sortByValue(matchingDict);
+            double bestScore = -500.0;
+            int bestX = 1;
+            int bestY = 1;
+            int mapX = 0;
+            int mapY = 0;
+            for (Map.Entry<Integer, Integer> entry : matchingDict.entrySet()) {
+                // System.out.println("Key = " + entry.getKey() + ", Value = " + entry.getValue());
+                mapY = (int) entry.getKey() / mundo.height;
+                mapX = entry.getKey() % mundo.height;
+                if (probs[mapX][mapY] * entry.getValue() > bestScore){
+                    bestScore = probs[mapX][mapY] * entry.getValue();
+                    bestX = mapX;
+                    bestY = mapY;
+                }
+            }
+            int bestAction = getBestActionForUnknown(bestX, bestY);
+            return bestAction;
         }
         getValidDirections(currentX, currentY);
 
         
         // default action for now
-        return getBestActionForUnknown();
+        return getBestActionForUnknown(currentX, currentY);
     }
 
     void setInitialRewards() {
@@ -922,19 +1002,19 @@ public class theRobot extends JFrame {
         //valueIteration();  // TODO: function you will write in Part II of the lab
         initializeProbabilities();  // Initializes the location (probability) map
         initializeValueIteration();
-        
+        String sonars = "Undefined";
         while (true) {
             try {
                 if (isManual)
                     action = getHumanAction();  // get the action selected by the user (from the keyboard)
                 else
-                    action = automaticAction(); // TODO: get the action selected by your AI;
+                    action = automaticAction(sonars); // TODO: get the action selected by your AI;
                                                 // you'll need to write this function for part III
                 
                 sout.println(action); // send the action to the Server
                 
                 // get sonar readings after the robot moves
-                String sonars = sin.readLine();
+                sonars = sin.readLine();
                 //System.out.println("Sonars: " + sonars);
             
                 updateProbabilities(action, sonars);
