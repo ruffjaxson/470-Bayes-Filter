@@ -376,7 +376,7 @@ public class theRobot extends JFrame {
     // 'j' specifies the movement left
     // 'k' specifies the movement stay
     int getHumanAction() {
-        System.out.println("Reading the action selected by the user");
+        // System.out.println("Reading the action selected by the user");
         while (myMaps.currentKey < 0) {
             try {
                 Thread.sleep(50);
@@ -388,7 +388,7 @@ public class theRobot extends JFrame {
         int a = myMaps.currentKey;
         myMaps.currentKey = -1;
         
-        System.out.println("Action: " + a);
+        // System.out.println("Action: " + a);
         
         return a;
     }
@@ -435,22 +435,43 @@ public class theRobot extends JFrame {
         myMaps.updateProbs(probs);
     }
 
-    void printWorldGrid() {
-        System.out.println();
-        for (int y = 0; y < mundo.height; y++) {
-            for (int x = 0; x < mundo.width; x++) {
-                System.out.print(mundo.grid[x][y]);
-            }
-            System.out.println();
-        }
-        System.out.println();
-    }
+    // void printWorldGrid() {
+    //     System.out.println();
+    //     for (int y = 0; y < mundo.height; y++) {
+    //         for (int x = 0; x < mundo.width; x++) {
+    //             System.out.print(mundo.grid[x][y]);
+    //         }
+    //         System.out.println();
+    //     }
+    //     System.out.println();
+    // }
 
     void printGeneral(double general[][]) {
         System.out.println();
+        int numSpaces = 0;
         for (int y = 0; y < mundo.height; y++) {
             for (int x = 0; x < mundo.width; x++) {
-                System.out.print(general[x][y] + " ");
+                double valToPrint = general[x][y] < 5.0 ? general[x][y] : Math.round(general[x][y] * 10.0) / 10.0;
+                System.out.print(valToPrint);
+                if (general[x][y] == 0.0) {
+                    numSpaces = 5;
+                } else if (general[x][y] < -99.999) {
+                    numSpaces = 2;
+                } else if (general[x][y] < -9.999) {
+                    numSpaces = 3;
+                } else if (general[x][y] < 0.0) {
+                    numSpaces = 4;
+                } else if (general[x][y] < 10.0) {
+                    numSpaces = 5;
+                } else if (general[x][y] < 100.0) {
+                    numSpaces = 4;
+                } else {
+                    numSpaces = 3;
+                }
+                
+                for (int i = 0; i < numSpaces; i++) {
+                    System.out.print(" ");
+                }
             }
             System.out.println();
         }
@@ -481,7 +502,7 @@ public class theRobot extends JFrame {
             probability *= (1 - sensorAccuracy);
         }
 
-        System.out.println("Got " + probability + " for sensor prob");
+        // System.out.println("Got " + probability + " for sensor prob");
         return probability;
     }
 
@@ -519,15 +540,15 @@ public class theRobot extends JFrame {
         } else {
             validDirections[1] = 0;
         }
-        if (mundo.grid[x-1][y] == 0) { // right
-            validDirections[2] = previousProbs[x-1][y];
+        if (mundo.grid[x+1][y] == 0) { // right
+            validDirections[2] = previousProbs[x+1][y];
             sureValidDirections[2] = 1;
             count++;
         } else {
             validDirections[2] = 0;
         }
-        if (mundo.grid[x+1][y] == 0) { // left
-            validDirections[3] = previousProbs[x+1][y];
+        if (mundo.grid[x-1][y] == 0) { // left
+            validDirections[3] = previousProbs[x-1][y];
             sureValidDirections[3] = 1;
             count++;
         } else {
@@ -602,20 +623,12 @@ public class theRobot extends JFrame {
     //       For example, the sonar string 1001, specifies that the sonars found a wall in the North and West directions, but not in the South and East directions
     void updateProbabilities(int action, String sonars) {
         copyProbs();
-        // your code
         int isWallDetectedUp = sonars.charAt(0) == '1' ? 1 : 0;
         int isWallDetectedDown = sonars.charAt(1) == '1' ? 1 : 0;
         int isWallDetectedRight = sonars.charAt(2) == '1' ? 1 : 0;
         int isWallDetectedLeft = sonars.charAt(3) == '1' ? 1 : 0;
         double sensorProbability;
         double transitionProbability;
-
-        // System.out.println(getClass(sonars.charAt(1)));
-        // printWorldGrid();
-        // System.out.println("isWallDetectedUp: " + isWallDetectedUp);
-        // System.out.println("isWallDetectedDown: " + isWallDetectedDown);
-        // System.out.println("isWallDetectedRight: " + isWallDetectedRight);
-        // System.out.println("isWallDetectedLeft: " + isWallDetectedLeft);
 
         for (int y = 0; y < mundo.height; y++) {
             for (int x = 0; x < mundo.width; x++) {
@@ -628,13 +641,13 @@ public class theRobot extends JFrame {
                     probs[x][y] = 0;
                 }
             }
-            System.out.println();
+            // System.out.println();
         }
 
 
         // System.out.println("probs before normalizing:");
         // printGeneral(probabilies);
-        // normalizeProbs();
+        normalizeProbs();
         // printGeneral();
         // System.out.println("probs after normalizing:");
         // printGeneral();
@@ -642,6 +655,39 @@ public class theRobot extends JFrame {
                                    //  new probabilities will show up in the probability map on the GUI
     }
     
+    double getUtilityOfAction(int x, int y, int action) {
+        double totalUtility = 0.0;
+        int numberOfAvailableMoves = getValidDirections(x, y);
+        for (int i = 0; i < 5; i++) {
+            double myMoveProb = action == i ? moveProb : (1 - moveProb) / numberOfAvailableMoves;    
+            switch (i) {
+                case NORTH:
+                    if (mundo.grid[x][y - 1] != WALL) {
+                        totalUtility += myMoveProb * prevUtilities[x][y - 1];
+                    }
+                    break;
+                case SOUTH:
+                    if (mundo.grid[x][y + 1] != WALL) {
+                        totalUtility += myMoveProb * prevUtilities[x][y + 1];
+                    }
+                    break;
+                case EAST:
+                    if (mundo.grid[x + 1][y] != WALL) {
+                        totalUtility += myMoveProb * prevUtilities[x + 1][y];
+                    }
+                    break;
+                case WEST:
+                    if (mundo.grid[x - 1][y] != WALL) {
+                        totalUtility += myMoveProb * prevUtilities[x - 1][y];
+                    }
+                    break;
+                case STAY:
+                    totalUtility += myMoveProb * prevUtilities[x][y];
+                    break;
+            }
+        }
+        return totalUtility;
+    }
 
     void updateCurrentLocation(int action) {
         switch (action) {
@@ -660,9 +706,7 @@ public class theRobot extends JFrame {
         }
     }
 
-    // This is the function you'd need to write to make the robot move using your AI;
-    // You do NOT need to write this function for this lab; it can remain as is
-    int automaticAction() {
+    int getActionForKnownPosition() {
         double maxAction = 0.0;
         int maxIndex = STAY;
         getValidDirections(currentX, currentY);
@@ -699,7 +743,78 @@ public class theRobot extends JFrame {
         }
 
         updateCurrentLocation(maxIndex);
-        return maxIndex;  // default action for now
+        return maxIndex;
+    }
+
+    double getMostProbablePosition() {
+        currentX = -1;
+        currentY = -1;
+        double maxProb = -1.0;
+        for (int y = 0; y < mundo.height; y++) {
+            for (int x = 0; x < mundo.width; x++) {
+                if (probs[x][y] > maxProb) {
+                    currentX = x;
+                    currentY = y;
+                    maxProb = probs[x][y];
+                }
+            }
+        }
+        System.out.println("maxProb: " + maxProb);
+        return maxProb;
+    }
+
+    int getBestActionForUnknown() {
+        double maxUtility = Double.NEGATIVE_INFINITY;
+        int bestAction = -1;
+        for (int i = 0; i < 4; i++) {
+            if (sureValidDirections[i] == 1) {
+                switch (i) {
+                    case NORTH:
+                        if (utilities[currentX][currentY - 1] > maxUtility) {
+                            bestAction = i;
+                            maxUtility = utilities[currentX][currentY - 1];
+                        }
+                        break;
+                    case SOUTH:
+                        if (utilities[currentX][currentY + 1] > maxUtility) {
+                            bestAction = i;
+                            maxUtility = utilities[currentX][currentY + 1];
+                        }
+                        break;
+                    case EAST:
+                        if (utilities[currentX + 1][currentY] > maxUtility) {
+                            bestAction = i;
+                            maxUtility = utilities[currentX + 1][currentY];
+                        }
+                        break;
+                    case WEST:
+                        if (utilities[currentX - 1][currentY] > maxUtility) {
+                            bestAction = i;
+                            maxUtility = utilities[currentX - 1][currentY];
+                        }
+                        break;
+                }
+            }
+        }
+        return bestAction;
+    }
+
+    // This is the function you'd need to write to make the robot move using your AI;
+    // You do NOT need to write this function for this lab; it can remain as is
+    int automaticAction() {
+        if (knownPosition) {
+            return getActionForKnownPosition();
+        }
+
+        double probability = getMostProbablePosition();
+        if (probability < 0.5) {
+            // find safer move
+        }
+        getValidDirections(currentX, currentY);
+
+        
+        // default action for now
+        return getBestActionForUnknown();
     }
 
     void setInitialRewards() {
@@ -713,7 +828,7 @@ public class theRobot extends JFrame {
                         rewards[x][y] = -100;
                         break;
                     case GOAL:
-                        rewards[x][y] = 100;
+                        rewards[x][y] = 60;
                         break;
                 }
             }
@@ -731,16 +846,16 @@ public class theRobot extends JFrame {
     void recalculateUtilities() {
         double maxDiff = 0.0;
         double maxUtility = 0.0;
-        printGeneral(rewards);
+        double tempUtility = 0.0;
+        // printGeneral(rewards);
         do {
             maxDiff = 0.0;
-            printGeneral(utilities);
-            try {
-                System.out.println("Sleeping...");
-                Thread.sleep(500);  // delay that is useful to see what is happening when the AI selects actions
-            } catch (InterruptedException e) {
+            // try {
+            //     System.out.println("Sleeping...");
+            //     Thread.sleep(500);  // delay that is useful to see what is happening when the AI selects actions
+            // } catch (InterruptedException e) {
 
-            }
+            // }
             for (int y = 0; y < mundo.height; y++) {
                 for (int x = 0; x < mundo.width; x++) {
                     maxUtility = Double.NEGATIVE_INFINITY;
@@ -748,23 +863,27 @@ public class theRobot extends JFrame {
                         getValidDirections(x, y);
                         for (int i = 0; i < 4; i++) {
                             if (sureValidDirections[i] == 1) {
+                                tempUtility = getUtilityOfAction(x, y, i);
                                 switch (i) {
                                     case NORTH:
-                                        if (prevUtilities[x][y-1] > maxUtility) {
-                                            maxUtility = prevUtilities[x][y-1];
+                                        if (tempUtility > maxUtility) {
+                                            // maxUtility = prevUtilities[x][y-1];
+                                            maxUtility = tempUtility;
                                         }
                                     case SOUTH:
-                                        if (prevUtilities[x][y+1] > maxUtility) {
-                                            maxUtility = prevUtilities[x][y+1];
+                                        if (tempUtility > maxUtility) {
+                                            // maxUtility = prevUtilities[x][y+1];
+                                            maxUtility = tempUtility;
                                         }
-                                    // TODO: COME CHECK THESE [X+1]'S AND STUFF
                                     case EAST:
-                                        if (prevUtilities[x+1][y] > maxUtility) {
-                                            maxUtility = prevUtilities[x+1][y];
+                                        if (tempUtility > maxUtility) {
+                                            // maxUtility = prevUtilities[x+1][y];
+                                            maxUtility = tempUtility;
                                         }
                                     case WEST:
-                                        if (prevUtilities[x-1][y] > maxUtility) {
-                                            maxUtility = prevUtilities[x-1][y];
+                                        if (tempUtility > maxUtility) {
+                                            // maxUtility = prevUtilities[x-1][y];
+                                            maxUtility = tempUtility;
                                         }
                                 }
                             }
@@ -774,10 +893,12 @@ public class theRobot extends JFrame {
                     }
                 }
             }
-            System.out.println("maxDiff: " + maxDiff);
+            // System.out.println("maxDiff: " + maxDiff);
             setPreviousUtilties();
         } while (maxDiff > 2.0);
-    }
+
+    }            
+
 
     void setInitialUtilities() {
         for (int y = 0; y < mundo.height; y++) {
@@ -816,8 +937,14 @@ public class theRobot extends JFrame {
                 String sonars = sin.readLine();
                 //System.out.println("Sonars: " + sonars);
             
-                updateProbabilities(action, sonars); // TODO: this function should update the probabilities of where the AI thinks it is
+                updateProbabilities(action, sonars);
                 recalculateUtilities(); 
+                // System.out.println("Probabilities after iterations =================================================================");
+                // printGeneral(probs);
+
+                // System.out.println("\n\nUtilities after iterations =================================================================");
+                // printGeneral(utilities);
+                System.out.println("We think we're at: (" + currentX + ", " + currentY + ")");
                 
                 if (sonars.length() > 4) {  // check to see if the robot has reached its goal or fallen down stairs
                     if (sonars.charAt(4) == 'w') {

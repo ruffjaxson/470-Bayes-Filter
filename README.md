@@ -9,7 +9,7 @@ ps, and “known” specifies that the robot’s initial position is given to th
 simulation, and “unknown” is specified to say that the robot’s initial position is not given to the robot at
 the start of the simulation. For example:
 
-`java BayesWorld mundo_maze.txt 0.9 0.8 unknown`
+`java BayesWorld mundo_15_15.txt 0.9 0.8 unknown`
 
 starts the server in the world mundo_maze.txt, with pm= 0.9, ps= 0.8, and the robot’s initial position is
 unknown. Several worlds are already provided (you can create your own if you would like).
